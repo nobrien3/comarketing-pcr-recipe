@@ -1,68 +1,113 @@
-# Afterpay PCR Template
+# Afterpay Co-Marketing PCR Recipe
 
-A config-driven Post Campaign Report website.
-All campaign data lives in **campaign_data.js** — the HTML and charts never need editing.
+Generates a fully populated, interactive Post Campaign Report (PCR) website
+for any Afterpay co-marketing campaign — end to end. Runs all Snowflake queries,
+builds the site, and deploys to Blockcell automatically.
+
+**Repo:** `nobrien3/comarketing-pcr-recipe`
 
 ---
 
-## How to create a new PCR
+## Quickstart for colleagues
 
-### Step 1 — Run the Snowflake queries
-Open `queries.sql` and run each query with your merchant name and campaign dates.
-Copy the results into `campaign_data.js`.
-
-### Step 2 — Fill in campaign_data.js
-Edit every value in `campaign_data.js`. The sections are:
-| Section | What to fill in |
-|---|---|
-| 1. IDENTITY | Merchant, campaign name, dates, market |
-| 2. HEADLINE KPIs | GPV, customers, AOV, transactions, NTM |
-| 3. COMPARISONS | Baseline + 2 historical campaigns |
-| 4. DAILY | One row per campaign day |
-| 5. CHANNEL | Online vs in-store split |
-| 6. PRODUCTS | Top 5 by units, top 5 by GPV, loyalty tile |
-| 7. SEGMENTS | Top 5 shopping segments + rank shift |
-| 8. CUSTOMERS | Age groups, generations, cohorts |
-| 9. INSIGHTS | Key learnings (free text) |
-| 10. RECOMMENDATIONS | Strategic actions (free text) |
-
-> **Tip:** If the merchant has no loyalty program, set `loyalty_program: null`
-> and `products.loyalty_tile: null` — the tile will be hidden automatically.
-
-### Step 3 — Deploy to Blockcell
-```bash
-# From inside the pcr_template folder (or your copy of it):
-# Upload via Goose / Blockcell tool with site name matching your campaign
-# e.g. cotton-on-eofy-jun26
+### 1. Point Goose at this repo (one-time setup)
+```sh
+goose configure
+# → goose settings
+# → goose recipe github repo
+# → nobrien3/comarketing-pcr-recipe
 ```
-Or ask Goose: *"Deploy the pcr_template folder to Blockcell as [site-name]"*
+
+> You'll also need the `gh` CLI installed and authenticated:
+> ```sh
+> brew install gh
+> gh auth login
+> ```
+
+### 2. Run the recipe
+```sh
+goose run --recipe comarketing-pcr-recipe
+```
+
+Goose will prompt you for the campaign details, run all Snowflake queries,
+build the site, and deploy it to Blockcell. Done.
+
+---
+
+## What you'll be asked for
+
+| Parameter | Example |
+|---|---|
+| `merchant_name` | `Cotton On` |
+| `campaign_name` | `End of Financial Year Sale` |
+| `campaign_short` | `EOFY June 2026` |
+| `start_date` | `2026-06-01` |
+| `end_date` | `2026-06-07` |
+| `baseline_start` | 6 weeks before start: `2026-04-20` |
+| `baseline_end` | Day before campaign: `2026-05-31` |
+| `comp2_label` | Previous equivalent campaign: `EOFY Jun 25` |
+| `comp2_start` / `comp2_end` | Dates of that campaign |
+| `comp3_label` | Another historical campaign |
+| `comp3_start` / `comp3_end` | Dates of that campaign |
+| `site_name` | Blockcell slug: `cotton-on-eofy-jun26` |
+| `market` | `Australia` (default) |
+| `loyalty_program` | e.g. `Linen Lovers Program` — leave blank if none |
+
+---
+
+## What the recipe does
+
+```
+You provide campaign details
+        ↓
+Goose runs 6 Snowflake queries
+        ↓
+Goose computes % changes, formats all numbers
+        ↓
+Goose writes a populated campaign_data.js
+        ↓
+Goose deploys to Blockcell
+        ↓
+Live PCR site at https://blockcell.sqprod.co/sites/{site_name}/
+```
+
+Total time: ~5 minutes.
 
 ---
 
 ## File structure
+
 ```
-pcr_template/
-├── campaign_data.js   ← EDIT THIS for every new campaign
-├── index.html         ← Shell — do not edit
-├── charts.js          ← Reads from campaign_data.js — do not edit
-├── styles.css         ← Afterpay brand styles — do not edit
-├── queries.sql        ← Snowflake queries to run for each campaign
-└── README.md          ← This file
+comarketing-pcr-recipe/
+├── recipe.yaml          ← Goose recipe (entry point)
+├── campaign_data.js     ← Template data file (populated by recipe)
+├── index.html           ← Site shell — do not edit
+├── charts.js            ← Chart rendering — do not edit
+├── styles.css           ← Afterpay brand styles — do not edit
+├── queries.sql          ← Reference SQL queries
+└── README.md            ← This file
 ```
 
 ---
 
-## Adding/removing campaign days
-In `campaign_data.js`, the `daily` array drives all daily charts.
-Add or remove objects to match the actual campaign length:
-```js
-daily: [
-  { label:"Mon 1 Jun", label_short:"Mon 1", online:300000, instore:50000,
-    customers:1500, transactions:1600, aov:210.00 },
-  // ... one per day
-]
-```
+## Manual mode (Option 1 — config-driven)
 
-## Changing comparison periods
-Update the `comparisons` object and `kpi_badges` text to match your historical campaigns.
-The period chart will automatically use whatever labels and values you set.
+If you'd rather fill in the data yourself instead of running the full recipe:
+
+1. Copy this folder locally
+2. Edit `campaign_data.js` with your campaign values (all sections documented inline)
+3. Ask Goose: *"Deploy this folder to Blockcell as [site-name]"*
+
+---
+
+## Making changes
+
+Any updates pushed to `main` are immediately available to all colleagues —
+no redistribution needed. To update:
+
+```sh
+cd /path/to/pcr_template
+git add .
+git commit -m "describe your change"
+git push
+```
