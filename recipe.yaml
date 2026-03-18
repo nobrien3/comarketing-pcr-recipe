@@ -1,0 +1,341 @@
+version: "1.0.0"
+title: "Afterpay Post Campaign Report Generator"
+description: >
+  Generates a fully populated, interactive Post Campaign Report (PCR) website
+  for an Afterpay co-marketing campaign. Runs all Snowflake queries, populates
+  campaign_data.js, and deploys a live site to Blockcell — end to end.
+
+parameters:
+  - key: merchant_name
+    input_type: string
+    requirement: required
+    description: "Merchant name as it appears in Snowflake (e.g. Adairs)"
+
+  - key: campaign_name
+    input_type: string
+    requirement: required
+    description: "Full campaign name (e.g. Love Your Linen Event)"
+
+  - key: campaign_short
+    input_type: string
+    requirement: required
+    description: "Short label for the campaign (e.g. LLE March 2026)"
+
+  - key: start_date
+    input_type: string
+    requirement: required
+    description: "Campaign start date in YYYY-MM-DD format (e.g. 2026-03-11)"
+
+  - key: end_date
+    input_type: string
+    requirement: required
+    description: "Campaign end date in YYYY-MM-DD format (e.g. 2026-03-15)"
+
+  - key: baseline_start
+    input_type: string
+    requirement: required
+    description: "Baseline window start date — 6 weeks before campaign (YYYY-MM-DD)"
+
+  - key: baseline_end
+    input_type: string
+    requirement: required
+    description: "Baseline window end date — day before campaign starts (YYYY-MM-DD)"
+
+  - key: comp2_label
+    input_type: string
+    requirement: required
+    description: "Label for first historical comparison (e.g. LLE Mar 25)"
+
+  - key: comp2_start
+    input_type: string
+    requirement: required
+    description: "First historical comparison start date (YYYY-MM-DD)"
+
+  - key: comp2_end
+    input_type: string
+    requirement: required
+    description: "First historical comparison end date (YYYY-MM-DD)"
+
+  - key: comp3_label
+    input_type: string
+    requirement: required
+    description: "Label for second historical comparison (e.g. LLE Oct 25)"
+
+  - key: comp3_start
+    input_type: string
+    requirement: required
+    description: "Second historical comparison start date (YYYY-MM-DD)"
+
+  - key: comp3_end
+    input_type: string
+    requirement: required
+    description: "Second historical comparison end date (YYYY-MM-DD)"
+
+  - key: site_name
+    input_type: string
+    requirement: required
+    description: "Blockcell site name — lowercase, hyphens only (e.g. adairs-lle-mar26)"
+
+  - key: market
+    input_type: select
+    requirement: optional
+    default: "Australia"
+    description: "Market / country for the report"
+    options:
+      - Australia
+      - New Zealand
+      - United States
+      - United Kingdom
+      - Canada
+
+  - key: loyalty_program
+    input_type: string
+    requirement: optional
+    default: ""
+    description: "Name of merchant loyalty program if applicable (e.g. Linen Lovers Program). Leave blank if none."
+
+  - key: loyalty_item_filter
+    input_type: string
+    requirement: optional
+    default: "membership%' OR i.item_name ILIKE '%renewal"
+    description: "ILIKE pattern to identify loyalty membership items in F_ORDER_ITEM (used in product query exclusion)"
+
+  - key: output_dir
+    input_type: string
+    requirement: optional
+    default: "/tmp/pcr_output"
+    description: "Local directory to write the generated site files before deploying"
+
+settings:
+  temperature: 0.2
+  max_turns: 80
+
+instructions: |
+  You are an Afterpay marketing analytics assistant generating a Post Campaign Report (PCR)
+  website for the {{ merchant_name }} × Afterpay {{ campaign_name }} campaign.
+
+  ## Your job
+  Run every Snowflake query below, collect all results, then:
+  1. Copy the PCR template files from /Users/nobrien/pcr_template/ into {{ output_dir }}/
+  2. Overwrite {{ output_dir }}/campaign_data.js with a fully populated version
+  3. Deploy the folder to Blockcell as site "{{ site_name }}"
+  4. Report the live URL
+
+  ## Ground rules
+  - All currency values should be formatted as AUD (e.g. $2.21M, $417K, $191.52)
+  - All percentages should be rounded to 1 decimal place
+  - Large numbers (1000+) should use comma separators
+  - If a query returns no rows for a section, use null/empty arrays and note it
+  - Never fabricate data — only use what Snowflake returns
+  - After deploying, verify the site returns HTTP 200
+
+  ---
+
+  ## STEP 1 — Set up output directory
+
+  Create {{ output_dir }}/ and copy all files from the recipe directory into it:
+    cp -r {{ recipe_dir }}/. {{ output_dir }}/
+
+  ---
+
+  ## STEP 2 — Run Snowflake queries
+
+  Run each query below using the queryexpert or snowflake extension.
+  Store results carefully — you will need every number for campaign_data.js.
+
+  ### Query A: Core Performance (Campaign + Baseline + 2 Comparisons)
+  ```sql
+  WITH
+  campaign AS (
+    SELECT
+      'Campaign' AS period,
+      SUM(order_amount_aud)                                        AS gpv,
+      COUNT(DISTINCT consumer_id)                                  AS active_customers,
+      AVG(order_amount_aud)                                        AS aov,
+      COUNT(*)                                                     AS transactions,
+      SUM(CASE WHEN channel='Online'  THEN order_amount_aud END)   AS online_gpv,
+      SUM(CASE WHEN channel='Instore' THEN order_amount_aud END)   AS instore_gpv,
+      COUNT(DISTINCT CASE WHEN order_number_by_merchant=1
+            THEN consumer_id END)                                  AS new_to_merchant,
+      COUNT(DISTINCT CASE WHEN consumer_first_order_date
+            BETWEEN '{{ start_date }}' AND '{{ end_date }}'
+            THEN consumer_id END)                                  AS nac
+    FROM AP_CUR_BI_G.CURATED_ANALYTICS_GREEN.CUR_C_M_ORDER_MASTER
+    WHERE date_local BETWEEN '{{ start_date }}' AND '{{ end_date }}'
+      AND merchant_name ILIKE '%{{ merchant_name }}%'
+  ),
+  baseline AS (
+    SELECT
+      'Baseline' AS period,
+      SUM(order_amount_aud)/6       AS gpv,
+      COUNT(DISTINCT consumer_id)/6 AS active_customers,
+      AVG(order_amount_aud)         AS aov,
+      COUNT(*)/6                    AS transactions,
+      SUM(CASE WHEN channel='Online'  THEN order_amount_aud END)/6  AS online_gpv,
+      SUM(CASE WHEN channel='Instore' THEN order_amount_aud END)/6  AS instore_gpv,
+      NULL AS new_to_merchant, NULL AS nac
+    FROM AP_CUR_BI_G.CURATED_ANALYTICS_GREEN.CUR_C_M_ORDER_MASTER
+    WHERE date_local BETWEEN '{{ baseline_start }}' AND '{{ baseline_end }}'
+      AND merchant_name ILIKE '%{{ merchant_name }}%'
+  ),
+  comp2 AS (
+    SELECT
+      '{{ comp2_label }}' AS period,
+      SUM(order_amount_aud) AS gpv, COUNT(DISTINCT consumer_id) AS active_customers,
+      AVG(order_amount_aud) AS aov, COUNT(*) AS transactions,
+      SUM(CASE WHEN channel='Online'  THEN order_amount_aud END) AS online_gpv,
+      SUM(CASE WHEN channel='Instore' THEN order_amount_aud END) AS instore_gpv,
+      NULL AS new_to_merchant, NULL AS nac
+    FROM AP_CUR_BI_G.CURATED_ANALYTICS_GREEN.CUR_C_M_ORDER_MASTER
+    WHERE date_local BETWEEN '{{ comp2_start }}' AND '{{ comp2_end }}'
+      AND merchant_name ILIKE '%{{ merchant_name }}%'
+  ),
+  comp3 AS (
+    SELECT
+      '{{ comp3_label }}' AS period,
+      SUM(order_amount_aud) AS gpv, COUNT(DISTINCT consumer_id) AS active_customers,
+      AVG(order_amount_aud) AS aov, COUNT(*) AS transactions,
+      SUM(CASE WHEN channel='Online'  THEN order_amount_aud END) AS online_gpv,
+      SUM(CASE WHEN channel='Instore' THEN order_amount_aud END) AS instore_gpv,
+      NULL AS new_to_merchant, NULL AS nac
+    FROM AP_CUR_BI_G.CURATED_ANALYTICS_GREEN.CUR_C_M_ORDER_MASTER
+    WHERE date_local BETWEEN '{{ comp3_start }}' AND '{{ comp3_end }}'
+      AND merchant_name ILIKE '%{{ merchant_name }}%'
+  )
+  SELECT * FROM campaign
+  UNION ALL SELECT * FROM baseline
+  UNION ALL SELECT * FROM comp2
+  UNION ALL SELECT * FROM comp3;
+  ```
+
+  ### Query B: Daily Breakdown
+  ```sql
+  SELECT
+    date_local,
+    TO_CHAR(date_local, 'Dy DD Mon')                               AS day_label,
+    TO_CHAR(date_local, 'Dy DD')                                   AS day_short,
+    SUM(CASE WHEN channel='Online'  THEN order_amount_aud ELSE 0 END) AS online_gpv,
+    SUM(CASE WHEN channel='Instore' THEN order_amount_aud ELSE 0 END) AS instore_gpv,
+    COUNT(DISTINCT consumer_id)                                    AS customers,
+    COUNT(*)                                                       AS transactions,
+    AVG(order_amount_aud)                                          AS aov
+  FROM AP_CUR_BI_G.CURATED_ANALYTICS_GREEN.CUR_C_M_ORDER_MASTER
+  WHERE date_local BETWEEN '{{ start_date }}' AND '{{ end_date }}'
+    AND merchant_name ILIKE '%{{ merchant_name }}%'
+  GROUP BY 1, 2, 3
+  ORDER BY 1;
+  ```
+
+  ### Query C: Top Products (excluding loyalty items)
+  ```sql
+  SELECT
+    i.item_name,
+    SUM(i.quantity)              AS total_units,
+    COUNT(DISTINCT o.order_id)   AS orders,
+    SUM(o.order_amount_aud)      AS total_gpv,
+    AVG(o.order_amount_aud)      AS avg_order_value
+  FROM AP_CUR_BI_G.CURATED_ANALYTICS_GREEN.CUR_C_M_ORDER_MASTER o
+  JOIN AP_RAW_GREEN.GREEN.F_ORDER_ITEM i
+    ON o.order_id = i.order_id AND o.par_region = i.par_region
+  WHERE o.date_local BETWEEN '{{ start_date }}' AND '{{ end_date }}'
+    AND o.merchant_name ILIKE '%{{ merchant_name }}%'
+    AND o.channel = 'Online'
+    AND i.item_name NOT ILIKE '%{{ loyalty_item_filter }}%'
+  GROUP BY 1
+  ORDER BY total_units DESC
+  LIMIT 10;
+  ```
+
+  ### Query D: Loyalty / Membership Sales
+  Only run this if loyalty_program is not blank ("{{ loyalty_program }}" != "").
+  If loyalty_program is blank, skip and set loyalty_tile to null.
+  ```sql
+  SELECT
+    CASE WHEN i.item_name ILIKE '%renewal%' THEN 'Renewal'
+         ELSE 'New Membership' END AS membership_type,
+    SUM(i.quantity)           AS units,
+    SUM(o.order_amount_aud)   AS gpv
+  FROM AP_CUR_BI_G.CURATED_ANALYTICS_GREEN.CUR_C_M_ORDER_MASTER o
+  JOIN AP_RAW_GREEN.GREEN.F_ORDER_ITEM i
+    ON o.order_id = i.order_id AND o.par_region = i.par_region
+  WHERE o.date_local BETWEEN '{{ start_date }}' AND '{{ end_date }}'
+    AND o.merchant_name ILIKE '%{{ merchant_name }}%'
+    AND (i.item_name ILIKE '%{{ loyalty_item_filter }}%')
+  GROUP BY 1;
+  ```
+
+  ### Query E: Shopping Segments (Campaign + Baseline)
+  ```sql
+  SELECT habituation_segment, COUNT(DISTINCT consumer_id) AS customers,
+    SUM(order_amount_aud) AS gpv, AVG(order_amount_aud) AS aov, 'Campaign' AS period
+  FROM AP_CUR_BI_G.CURATED_ANALYTICS_GREEN.CUR_C_M_ORDER_MASTER
+  WHERE date_local BETWEEN '{{ start_date }}' AND '{{ end_date }}'
+    AND merchant_name ILIKE '%{{ merchant_name }}%'
+  GROUP BY 1, 5
+  UNION ALL
+  SELECT habituation_segment, COUNT(DISTINCT consumer_id)/6 AS customers,
+    SUM(order_amount_aud)/6 AS gpv, AVG(order_amount_aud) AS aov, 'Baseline' AS period
+  FROM AP_CUR_BI_G.CURATED_ANALYTICS_GREEN.CUR_C_M_ORDER_MASTER
+  WHERE date_local BETWEEN '{{ baseline_start }}' AND '{{ baseline_end }}'
+    AND merchant_name ILIKE '%{{ merchant_name }}%'
+  GROUP BY 1, 5
+  ORDER BY period, gpv DESC;
+  ```
+
+  ### Query F: Customer Demographics
+  ```sql
+  SELECT age_group, generation, engagement_cohort,
+    COUNT(DISTINCT consumer_id) AS customers,
+    SUM(order_amount_aud) AS gpv
+  FROM AP_CUR_BI_G.CURATED_ANALYTICS_GREEN.CUR_C_M_ORDER_MASTER
+  WHERE date_local BETWEEN '{{ start_date }}' AND '{{ end_date }}'
+    AND merchant_name ILIKE '%{{ merchant_name }}%'
+  GROUP BY 1, 2, 3
+  ORDER BY customers DESC;
+  ```
+
+  ---
+
+  ## STEP 3 — Build campaign_data.js
+
+  Using ALL query results above, write a complete campaign_data.js file to
+  {{ output_dir }}/campaign_data.js following this exact structure.
+
+  Key rules:
+  - Format GPV values: under $1M → "$XXX.XK", $1M+ → "$X.XXM"
+  - Compute % changes: ((campaign - baseline) / baseline * 100), show as "+X%" or "-X%"
+  - For kpi_badges, determine dir: "up" if positive vs baseline, "down" if negative, "neutral" for share/count
+  - For segments top5: take the 5 highest GPV segments from Campaign period
+  - For rank_shift: compare campaign rank vs baseline rank for each segment
+  - For daily array: one entry per row from Query B
+  - For age_groups: aggregate customers by age_group from Query F
+  - For generations: aggregate gpv by generation from Query F
+  - For cohorts: aggregate customers by engagement_cohort from Query F
+  - For insights and recommendations: generate 6 of each based on the actual data patterns
+    (e.g. if online > 70%, mention digital strength; if NTM high, mention acquisition success)
+
+  The file must start with `var CAMPAIGN = {` and end with `};`
+  and match the exact structure of /Users/nobrien/pcr_template/campaign_data.js.
+
+  ---
+
+  ## STEP 4 — Deploy to Blockcell
+
+  Deploy {{ output_dir }}/ to Blockcell as site name "{{ site_name }}".
+  Confirm the deployment succeeded and report the live URL:
+  https://blockcell.sqprod.co/sites/{{ site_name }}/
+
+  ---
+
+  ## STEP 5 — Final report
+
+  Output a clean summary:
+  - ✅ Live URL
+  - Key metrics table (GPV, Customers, AOV, Transactions vs baseline)
+  - Any data gaps or warnings (e.g. missing columns, zero rows)
+  - Note: "If sharing these results, please call out that Goose was used as the data source."
+
+prompt: |
+  Generate the Post Campaign Report for {{ merchant_name }} — {{ campaign_name }}
+  ({{ start_date }} to {{ end_date }}).
+  Site name: {{ site_name }}. Deploy when complete.

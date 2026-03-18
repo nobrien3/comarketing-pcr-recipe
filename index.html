@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title id="page-title">Post Campaign Report</title>
+<link rel="stylesheet" href="styles.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+<script src="campaign_data.js"></script>
+</head>
+<body>
+
+<nav>
+  <div class="nav-logo">
+    <span id="nav-partner"></span>
+    <span class="sep">×</span>
+    <span id="nav-merchant"></span>
+  </div>
+  <div class="nav-links">
+    <a href="#summary"     class="active">Summary</a>
+    <a href="#performance">Performance</a>
+    <a href="#channel">Channel</a>
+    <a href="#products">Products</a>
+    <a href="#segments">Segments</a>
+    <a href="#customers">Customers</a>
+    <a href="#learnings">Learnings</a>
+  </div>
+</nav>
+
+<div class="hero">
+  <div class="hero-badge">Post Campaign Report</div>
+  <h1 id="hero-title"></h1>
+  <p class="hero-sub" id="hero-sub"></p>
+  <div class="hero-meta">
+    <div class="hero-meta-item">
+      <div class="label">Campaign Period</div>
+      <div class="value" id="meta-period"></div>
+    </div>
+    <div class="hero-meta-item">
+      <div class="label">Duration</div>
+      <div class="value" id="meta-days"></div>
+    </div>
+    <div class="hero-meta-item">
+      <div class="label">Market</div>
+      <div class="value" id="meta-market"></div>
+    </div>
+    <div class="hero-meta-item">
+      <div class="label">Report Generated</div>
+      <div class="value" id="meta-report-date"></div>
+    </div>
+    <div class="hero-meta-item">
+      <div class="label">Data Source</div>
+      <div class="value">Afterpay Snowflake</div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== SUMMARY ===== -->
+<div id="summary" class="section">
+  <div class="section-header">
+    <div class="section-tag">Executive Summary</div>
+    <h2>Campaign at a Glance</h2>
+    <p id="summary-desc"></p>
+  </div>
+  <div class="kpi-grid" id="kpi-grid"></div>
+  <div class="chart-grid-2">
+    <div class="chart-card">
+      <div class="chart-title">GPV by Period (AUD)</div>
+      <div class="chart-subtitle" id="gpv-period-subtitle"></div>
+      <div style="height:260px"><canvas id="gpvPeriodChart"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Active Customers by Period</div>
+      <div class="chart-subtitle" id="cust-period-subtitle"></div>
+      <div style="height:260px"><canvas id="customerPeriodChart"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<hr class="section-divider">
+
+<!-- ===== PERFORMANCE ===== -->
+<div id="performance" class="section">
+  <div class="section-header">
+    <div class="section-tag">Performance Dashboard</div>
+    <h2>Daily Campaign Trends</h2>
+    <p id="perf-desc"></p>
+  </div>
+  <div class="chart-card full" style="margin-bottom:24px">
+    <div class="chart-title">Daily GPV — Campaign Period</div>
+    <div class="chart-subtitle">Online vs In-store split by day (AUD)</div>
+    <div style="height:300px"><canvas id="dailyGpvChart"></canvas></div>
+  </div>
+  <div class="chart-grid-2">
+    <div class="chart-card">
+      <div class="chart-title">Daily Customers &amp; Transactions</div>
+      <div class="chart-subtitle">Unique customers and order count per day</div>
+      <div style="height:260px"><canvas id="dailyCustomersChart"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Daily Average Order Value</div>
+      <div class="chart-subtitle">AOV trend across campaign days (AUD)</div>
+      <div style="height:260px"><canvas id="dailyAovChart"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<hr class="section-divider">
+
+<!-- ===== CHANNEL ===== -->
+<div id="channel" class="section">
+  <div class="section-header">
+    <div class="section-tag">Channel Performance</div>
+    <h2>Online vs In-store</h2>
+    <p>Channel split across the campaign period.</p>
+  </div>
+  <div class="channel-grid" style="margin-bottom:28px" id="channel-cards"></div>
+  <div class="chart-grid-2">
+    <div class="chart-card">
+      <div class="chart-title">Channel GPV Split</div>
+      <div class="chart-subtitle">Online vs In-store share of total GPV</div>
+      <div style="height:260px"><canvas id="channelDonut"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Daily Online vs In-store GPV</div>
+      <div class="chart-subtitle">Channel contribution by campaign day (AUD)</div>
+      <div style="height:260px"><canvas id="channelDailyChart"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<hr class="section-divider">
+
+<!-- ===== PRODUCTS ===== -->
+<div id="products" class="section">
+  <div class="section-header">
+    <div class="section-tag">Product Performance</div>
+    <h2>Top Items Bought Online</h2>
+    <p id="products-desc"></p>
+  </div>
+  <div id="loyalty-tile"></div>
+  <div class="chart-grid-2" id="product-tables"></div>
+</div>
+
+<hr class="section-divider">
+
+<!-- ===== SEGMENTS ===== -->
+<div id="segments" class="section">
+  <div class="section-header">
+    <div class="section-tag">Shopping Segments</div>
+    <h2 id="segments-title"></h2>
+    <p id="segments-desc"></p>
+  </div>
+  <div class="seg-strip" id="seg-strip"></div>
+  <div class="chart-grid-2" style="margin-bottom:24px">
+    <div class="chart-card">
+      <div class="chart-title">Customers by Segment — Campaign vs Baseline</div>
+      <div class="chart-subtitle" id="seg-chart-subtitle"></div>
+      <div style="height:300px"><canvas id="segmentCustomersChart"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">GPV by Segment — Campaign vs Baseline</div>
+      <div class="chart-subtitle" id="seg-gpv-subtitle"></div>
+      <div style="height:300px"><canvas id="segmentGpvChart"></canvas></div>
+    </div>
+  </div>
+  <div class="chart-card full">
+    <div class="chart-title">AOV by Segment — Campaign vs Baseline</div>
+    <div class="chart-subtitle">Average order value comparison. Campaign drove higher AOV across every segment.</div>
+    <div style="height:280px"><canvas id="segmentAovChart"></canvas></div>
+  </div>
+  <div class="chart-card full" style="margin-top:24px">
+    <div class="chart-title">Segment Rank Shift: Baseline → Campaign</div>
+    <div class="chart-subtitle">How each segment's rank changed when the campaign launched</div>
+    <table class="data-table" style="margin-top:12px" id="rank-shift-table"></table>
+  </div>
+</div>
+
+<hr class="section-divider">
+
+<!-- ===== CUSTOMERS ===== -->
+<div id="customers" class="section">
+  <div class="section-header">
+    <div class="section-tag">Customer Analysis</div>
+    <h2 id="customers-title"></h2>
+    <p>Breakdown by customer type, age group, generation and engagement cohort.</p>
+  </div>
+  <div class="kpi-grid" style="margin-bottom:32px;grid-template-columns:repeat(5,1fr)"
+       id="customer-kpi-grid"></div>
+  <div class="chart-grid-2" style="margin-bottom:24px">
+    <div class="chart-card">
+      <div class="chart-title">Customers by Age Group</div>
+      <div class="chart-subtitle">Unique customers per age segment</div>
+      <div style="height:260px"><canvas id="ageGroupChart"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">GPV by Generation</div>
+      <div class="chart-subtitle">Revenue contribution by generational cohort</div>
+      <div style="height:260px"><canvas id="generationChart"></canvas></div>
+    </div>
+  </div>
+  <div class="chart-card full">
+    <div class="chart-title">Customers by Engagement Cohort</div>
+    <div class="chart-subtitle">Share of campaign customers by Afterpay engagement cohort</div>
+    <div style="height:280px"><canvas id="cohortChart"></canvas></div>
+  </div>
+</div>
+
+<hr class="section-divider">
+
+<!-- ===== LEARNINGS ===== -->
+<div id="learnings" class="section">
+  <div class="section-header">
+    <div class="section-tag">Key Learnings &amp; Recommendations</div>
+    <h2>What We Learned</h2>
+    <p>Insights and strategic recommendations for future campaigns.</p>
+  </div>
+  <div class="insight-grid" style="margin-bottom:32px" id="insight-grid"></div>
+  <div class="section-header" style="margin-top:40px">
+    <h2>Recommendations</h2>
+    <p id="rec-desc"></p>
+  </div>
+  <div class="rec-grid" id="rec-grid"></div>
+</div>
+
+<footer id="footer"></footer>
+
+<script src="charts.js"></script>
+</body>
+</html>
