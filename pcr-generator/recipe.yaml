@@ -117,7 +117,7 @@ instructions: |
 
   ## Your job
   Run every Snowflake query below, collect all results, then:
-  1. Copy the PCR template files from {{ recipe_dir }}/ into {{ output_dir }}/
+  1. Download the PCR template files from GitHub into {{ output_dir }}/
   2. Overwrite {{ output_dir }}/campaign_data.js with a fully populated version
   3. Deploy the folder to Blockcell as site "{{ site_name }}"
   4. Report the live URL
@@ -134,8 +134,18 @@ instructions: |
 
   ## STEP 1 — Set up output directory
 
-  Create {{ output_dir }}/ and copy all files from the recipe directory into it:
-    cp -r {{ recipe_dir }}/. {{ output_dir }}/
+  Create {{ output_dir }}/ and download the PCR template files from GitHub:
+
+  ```bash
+  mkdir -p {{ output_dir }}
+  REPO_BASE="https://raw.githubusercontent.com/nobrien3/comarketing-pcr-recipe/main/pcr-generator"
+  curl -sL "$REPO_BASE/index.html"        -o {{ output_dir }}/index.html
+  curl -sL "$REPO_BASE/styles.css"        -o {{ output_dir }}/styles.css
+  curl -sL "$REPO_BASE/charts.js"         -o {{ output_dir }}/charts.js
+  curl -sL "$REPO_BASE/campaign_data.js"  -o {{ output_dir }}/campaign_data.js
+  ```
+
+  Verify all 4 files were downloaded and are non-empty before proceeding.
 
   ---
 
@@ -316,7 +326,7 @@ instructions: |
     (e.g. if online > 70%, mention digital strength; if NTM high, mention acquisition success)
 
   The file must start with `var CAMPAIGN = {` and end with `};`
-  and match the exact structure of {{ recipe_dir }}/campaign_data.js.
+  and match the exact structure of {{ output_dir }}/campaign_data.js (the template you downloaded in Step 1).
 
   ---
 
