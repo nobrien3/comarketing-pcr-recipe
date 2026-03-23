@@ -26,7 +26,7 @@ goose configure
 
 ### 2. Run the recipe
 ```sh
-goose run --recipe comarketing-pcr-recipe
+goose run --recipe pcr-generator
 ```
 
 Goose will prompt you for the campaign details, run all Snowflake queries,
@@ -79,13 +79,15 @@ Total time: ~5 minutes.
 
 ```
 comarketing-pcr-recipe/
-├── recipe.yaml          ← Goose recipe (entry point)
-├── campaign_data.js     ← Template data file (populated by recipe)
-├── index.html           ← Site shell — do not edit
-├── charts.js            ← Chart rendering — do not edit
-├── styles.css           ← Afterpay brand styles — do not edit
-├── queries.sql          ← Reference SQL queries
-└── README.md            ← This file
+├── README.md                          ← This file
+└── recipes/
+    └── pcr-generator/
+        ├── recipe.yaml                ← Goose recipe (entry point)
+        ├── campaign_data.js           ← Template data file (populated by recipe)
+        ├── index.html                 ← Site shell — do not edit
+        ├── charts.js                  ← Chart rendering — do not edit
+        ├── styles.css                 ← Afterpay brand styles — do not edit
+        └── queries.sql                ← Reference SQL queries
 ```
 
 ---
@@ -94,7 +96,7 @@ comarketing-pcr-recipe/
 
 If you'd rather fill in the data yourself instead of running the full recipe:
 
-1. Copy this folder locally
+1. Copy the `recipes/pcr-generator/` folder locally
 2. Edit `campaign_data.js` with your campaign values (all sections documented inline)
 3. Ask Goose: *"Deploy this folder to Blockcell as [site-name]"*
 
@@ -106,7 +108,6 @@ Any updates pushed to `main` are immediately available to all colleagues —
 no redistribution needed. To update:
 
 ```sh
-cd /path/to/pcr_template
 git add .
 git commit -m "describe your change"
 git push
