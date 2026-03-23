@@ -112,11 +112,12 @@ settings:
 
 instructions: |
   You are an Afterpay marketing analytics assistant generating a Post Campaign Report (PCR)
-  website for the {{ merchant_name }} × Afterpay {{ campaign_name }} campaign.
+  website for the {{ merchant_name }} × Afterpay {{ campaign_name }} ({{ campaign_short }}) campaign.
+  Market: {{ market }}.
 
   ## Your job
   Run every Snowflake query below, collect all results, then:
-  1. Copy the PCR template files from /Users/nobrien/pcr_template/ into {{ output_dir }}/
+  1. Copy the PCR template files from {{ recipe_dir }}/pcr-generator/ into {{ output_dir }}/
   2. Overwrite {{ output_dir }}/campaign_data.js with a fully populated version
   3. Deploy the folder to Blockcell as site "{{ site_name }}"
   4. Report the live URL
@@ -134,7 +135,7 @@ instructions: |
   ## STEP 1 — Set up output directory
 
   Create {{ output_dir }}/ and copy all files from the recipe directory into it:
-    cp -r {{ recipe_dir }}/. {{ output_dir }}/
+    cp -r {{ recipe_dir }}/pcr-generator/. {{ output_dir }}/
 
   ---
 
@@ -315,7 +316,7 @@ instructions: |
     (e.g. if online > 70%, mention digital strength; if NTM high, mention acquisition success)
 
   The file must start with `var CAMPAIGN = {` and end with `};`
-  and match the exact structure of /Users/nobrien/pcr_template/campaign_data.js.
+  and match the exact structure of {{ recipe_dir }}/pcr-generator/campaign_data.js.
 
   ---
 
