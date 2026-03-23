@@ -53,7 +53,8 @@ var CAMPAIGN = {
   // ---------------------------------------------------------------------------
   // 3. COMPARISON PERIODS
   // Labels and values for the 3 comparison bars shown in KPI cards + charts
-  // comp1 = baseline (always weekly avg), comp2 & comp3 = historical campaigns
+  // comp1 = baseline (always weekly avg), comp2 = historical campaign (required)
+  // comp3 = second historical campaign (optional — set to null if not provided)
   // ---------------------------------------------------------------------------
   comparisons: {
     baseline: {
@@ -72,6 +73,7 @@ var CAMPAIGN = {
       aov:          "$196",
       transactions: 10772
     },
+    // Set comp3 to null if no second historical comparison is provided
     comp3: {
       label:        "LLE Oct 25",
       gpv:          2465219,

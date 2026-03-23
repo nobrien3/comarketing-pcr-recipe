@@ -78,12 +78,13 @@ document.getElementById('perf-desc').textContent =
   'Day-by-day breakdown across the ' + CAMPAIGN.period_days.toLowerCase() +
   ' campaign window (' + CAMPAIGN.period_label + ').';
 
+var hasComp3 = CAMPAIGN.comparisons.comp3 != null;
 var compLabels = [
   CAMPAIGN.comparisons.baseline.label,
-  CAMPAIGN.comparisons.comp2.label,
-  CAMPAIGN.comparisons.comp3.label
+  CAMPAIGN.comparisons.comp2.label
 ];
-var periodSubtitle = 'Weekly Baseline avg vs ' + compLabels[1] + ' vs ' + compLabels[2] + ' vs ' + CAMPAIGN.campaign_short;
+if (hasComp3) { compLabels.push(CAMPAIGN.comparisons.comp3.label); }
+var periodSubtitle = 'Weekly Baseline avg vs ' + compLabels[1] + (hasComp3 ? ' vs ' + compLabels[2] : '') + ' vs ' + CAMPAIGN.campaign_short;
 document.getElementById('gpv-period-subtitle').textContent  = periodSubtitle;
 document.getElementById('cust-period-subtitle').textContent = periodSubtitle;
 
@@ -339,7 +340,20 @@ var daily       = CAMPAIGN.daily;
 var dLabels     = daily.map(function(d){ return d.label; });
 var dLabelsShort= daily.map(function(d){ return d.label_short; });
 var comp        = CAMPAIGN.comparisons;
-var periodLabels= [comp.baseline.label, comp.comp2.label, comp.comp3.label, CAMPAIGN.campaign_short];
+var periodLabels= [comp.baseline.label, comp.comp2.label];
+var periodGpv   = [comp.baseline.gpv, comp.comp2.gpv];
+var periodCust  = [comp.baseline.customers, comp.comp2.customers];
+var periodColors= [GRAY, MINT_LIGHT];
+if (hasComp3) {
+  periodLabels.push(comp.comp3.label);
+  periodGpv.push(comp.comp3.gpv);
+  periodCust.push(comp.comp3.customers);
+  periodColors.push('#6ddbb8');
+}
+periodLabels.push(CAMPAIGN.campaign_short);
+periodGpv.push(daily.reduce(function(s,d){ return s+d.online+d.instore; }, 0));
+periodCust.push(parseInt(CAMPAIGN.kpis.active_customers.replace(/,/g,'')));
+periodColors.push(MINT);
 
 // --- 1. GPV Period Chart -----------------------------------------------------
 mkChart('gpvPeriodChart', {
@@ -347,9 +361,8 @@ mkChart('gpvPeriodChart', {
   data: {
     labels: periodLabels,
     datasets: [{
-      data: [comp.baseline.gpv, comp.comp2.gpv, comp.comp3.gpv,
-             daily.reduce(function(s,d){ return s+d.online+d.instore; }, 0)],
-      backgroundColor: [GRAY, MINT_LIGHT, '#6ddbb8', MINT],
+      data: periodGpv,
+      backgroundColor: periodColors,
       borderRadius: 8
     }]
   },
@@ -369,9 +382,8 @@ mkChart('customerPeriodChart', {
   data: {
     labels: periodLabels,
     datasets: [{
-      data: [comp.baseline.customers, comp.comp2.customers, comp.comp3.customers,
-             parseInt(CAMPAIGN.kpis.active_customers.replace(/,/g,''))],
-      backgroundColor: [GRAY, MINT_LIGHT, '#6ddbb8', MINT],
+      data: periodCust,
+      backgroundColor: periodColors,
       borderRadius: 8
     }]
   },

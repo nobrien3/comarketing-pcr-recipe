@@ -58,18 +58,21 @@ parameters:
 
   - key: comp3_label
     input_type: string
-    requirement: required
-    description: "Label for second historical comparison (e.g. LLE Oct 25)"
+    requirement: optional
+    default: ""
+    description: "Label for second historical comparison (e.g. LLE Oct 25). Leave blank to skip."
 
   - key: comp3_start
     input_type: string
-    requirement: required
-    description: "Second historical comparison start date (YYYY-MM-DD)"
+    requirement: optional
+    default: ""
+    description: "Second historical comparison start date (YYYY-MM-DD). Leave blank to skip."
 
   - key: comp3_end
     input_type: string
-    requirement: required
-    description: "Second historical comparison end date (YYYY-MM-DD)"
+    requirement: optional
+    default: ""
+    description: "Second historical comparison end date (YYYY-MM-DD). Leave blank to skip."
 
   - key: site_name
     input_type: string
@@ -201,6 +204,7 @@ instructions: |
     WHERE date_local BETWEEN '{{ comp2_start }}' AND '{{ comp2_end }}'
       AND merchant_name ILIKE '%{{ merchant_name }}%'
   ),
+  -- Only include comp3 if comp3_label is not blank ("{{ comp3_label }}" != "")
   comp3 AS (
     SELECT
       '{{ comp3_label }}' AS period,
@@ -216,8 +220,12 @@ instructions: |
   SELECT * FROM campaign
   UNION ALL SELECT * FROM baseline
   UNION ALL SELECT * FROM comp2
+  -- Append the next line ONLY if comp3_label is not blank:
   UNION ALL SELECT * FROM comp3;
   ```
+
+  **Important:** If comp3_label is blank, omit the comp3 CTE and the final
+  `UNION ALL SELECT * FROM comp3` line entirely from the query.
 
   ### Query B: Daily Breakdown
   ```sql
@@ -351,6 +359,7 @@ instructions: |
   - Format GPV values: under $1M → "$XXX.XK", $1M+ → "$X.XXM"
   - Compute % changes: ((campaign - baseline) / baseline * 100), show as "+X%" or "-X%"
   - For kpi_badges, determine dir: "up" if positive vs baseline, "down" if negative, "neutral" for share/count
+  - If comp3 was not provided (comp3_label is blank), set comparisons.comp3 to null and only include 2 badges per KPI (baseline + comp2). The charts will adapt automatically.
   - For segments top5: take the 5 highest GPV segments from Campaign period
   - For rank_shift: compare campaign rank vs baseline rank for each segment; include 6th segment as rank_shift_extras
   - For daily array: one entry per row from Query B
