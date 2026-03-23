@@ -80,14 +80,13 @@ Total time: ~5 minutes.
 ```
 comarketing-pcr-recipe/
 ├── README.md                          ← This file
-└── recipes/
-    └── pcr-generator/
-        ├── recipe.yaml                ← Goose recipe (entry point)
-        ├── campaign_data.js           ← Template data file (populated by recipe)
-        ├── index.html                 ← Site shell — do not edit
-        ├── charts.js                  ← Chart rendering — do not edit
-        ├── styles.css                 ← Afterpay brand styles — do not edit
-        └── queries.sql                ← Reference SQL queries
+└── pcr-generator/
+    ├── recipe.yaml                    ← Goose recipe (entry point)
+    ├── campaign_data.js               ← Template data file (populated by recipe)
+    ├── index.html                     ← Site shell — do not edit
+    ├── charts.js                      ← Chart rendering — do not edit
+    ├── styles.css                     ← Afterpay brand styles — do not edit
+    └── queries.sql                    ← Reference SQL queries
 ```
 
 ---
@@ -96,7 +95,7 @@ comarketing-pcr-recipe/
 
 If you'd rather fill in the data yourself instead of running the full recipe:
 
-1. Copy the `recipes/pcr-generator/` folder locally
+1. Copy the `pcr-generator/` folder locally
 2. Edit `campaign_data.js` with your campaign values (all sections documented inline)
 3. Ask Goose: *"Deploy this folder to Blockcell as [site-name]"*
 
