@@ -44,10 +44,10 @@ var CAMPAIGN = {
     nac_pct:           "0.2%",
     existing:          "9,714",
     existing_pct:      "99.8%",
-    top_age_group:     "35+",
-    top_age_pct:       "64%",
-    top_cohort:        "Power User",
-    top_cohort_pct:    "66%"
+    top_location:      "Gold Coast",
+    top_location_pct:  "4.0%",
+    top_generation:    "Gen Y Millennial",
+    top_generation_pct:"47.7%"
   },
 
   // ---------------------------------------------------------------------------
@@ -237,26 +237,36 @@ var CAMPAIGN = {
   // ---------------------------------------------------------------------------
   // 8. CUSTOMER DEMOGRAPHICS
   // ---------------------------------------------------------------------------
-  customers: {
-    age_groups: [
-      { label:"18-21", count:69   },
-      { label:"22-24", count:256  },
-      { label:"25-29", count:1066 },
-      { label:"30-35", count:2108 },
-      { label:"35+",   count:6235 }
+  demographics: {
+    gender: [
+      { label:"Female",  value:8416 },
+      { label:"Male",    value:581  },
+      { label:"Unknown", value:737  }
     ],
     generations: [
-      { label:"Gen Y Millennial", gpv:1065863 },
-      { label:"Gen X",            gpv:550739  },
-      { label:"Gen Z",            gpv:447356  },
-      { label:"Baby Boomer",      gpv:141606  },
-      { label:"Other",            gpv:2240    }
+      { label:"Gen Y Millennial", value:1065863 },
+      { label:"Gen X",            value:550739  },
+      { label:"Gen Z",            value:447356  },
+      { label:"Baby Boomer",      value:141606  },
+      { label:"Other",            value:2240    }
     ],
     cohorts: [
-      { label:"Power User",    count:6564 },
-      { label:"Habituated",    count:1841 },
-      { label:"Occasional",    count:1284 },
-      { label:"New Onboarder", count:34   }
+      { label:"Power User",    value:6564 },
+      { label:"Habituated",    value:1841 },
+      { label:"Occasional",    value:1284 },
+      { label:"New Onboarder", value:34   }
+    ],
+    sa4_regions: [
+      { label:"Gold Coast",              value:387 },
+      { label:"Melbourne - West",        value:320 },
+      { label:"Melbourne - South East",  value:308 },
+      { label:"Perth - North West",      value:267 },
+      { label:"Mornington Peninsula",    value:245 },
+      { label:"Melbourne - North West",  value:239 },
+      { label:"Geelong",                 value:226 },
+      { label:"Melbourne - North East",  value:223 },
+      { label:"Melbourne - Outer East",  value:214 },
+      { label:"Central Coast",           value:211 }
     ]
   },
 

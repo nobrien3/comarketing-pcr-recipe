@@ -28,6 +28,33 @@ function badgeLabel(text) {
 function fmtK(v) { return '$' + (v/1000).toFixed(0) + 'K'; }
 function fmtCount(v) { return v.toLocaleString(); }
 
+function barOpts(stacked) {
+  return {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { legend: { position:'top' } },
+    scales: {
+      x: { stacked: !!stacked, grid: { display:false } },
+      y: { stacked: !!stacked,
+           ticks: { callback: function(v){ return '$'+(v/1000).toFixed(0)+'K'; } },
+           grid: { color:'#f0f0f0' } }
+    }
+  };
+}
+
+function countOpts() {
+  return {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { legend: { position:'top' } },
+    scales: {
+      x: { grid: { display:false } },
+      y: { ticks: { callback: function(v){ return v.toLocaleString(); } },
+           grid: { color:'#f0f0f0' } }
+    }
+  };
+}
+
 // --- 1. Identity -------------------------------------------------------------
 document.getElementById('page-title').textContent =
   CAMPAIGN.merchant + ' x ' + CAMPAIGN.partner + ' | ' + CAMPAIGN.campaign_short + ' PCR';
@@ -247,10 +274,10 @@ var custKpis = [
       { dir:'up', text: ck.ntm_vs_baseline, label:'vs weekly baseline (' + ck.ntm_baseline_val + ')' },
       { dir:'neutral', text: ck.ntm_pct, label:'of total actives' }
     ]},
-  { label:'Top Age Group', value: ck.top_age_group,
-    badges:[{ dir:'neutral', text: ck.top_age_pct, label:'of customers' }] },
-  { label:'Top Cohort', value: ck.top_cohort,
-    badges:[{ dir:'up', text: ck.top_cohort_pct, label:'of customers' }] }
+  { label:'Top Location (SA4)', value: ck.top_location,
+    badges:[{ dir:'neutral', text: ck.top_location_pct, label:'of customers' }] },
+  { label:'Top Generation', value: ck.top_generation,
+    badges:[{ dir:'neutral', text: ck.top_generation_pct, label:'of customers' }] }
 ];
 var custGrid = document.getElementById('customer-kpi-grid');
 custKpis.forEach(function(k) {
@@ -298,6 +325,13 @@ document.getElementById('footer').innerHTML =
   '<p style="margin-top:8px">Data sourced from Afterpay Snowflake. All figures in AUD. Generated ' +
   CAMPAIGN.report_date + '.</p>' +
   '<p style="margin-top:8px;font-size:11px">Note: If sharing these results, please call out that Goose was used as the data source and ensure the query has been saved for validation.</p>';
+
+// --- 9. SA4 subtitle ---------------------------------------------------------
+var sa4Sub = document.getElementById('sa4-subtitle');
+if (sa4Sub) {
+  sa4Sub.textContent = 'Unique customers by Statistical Area Level 4, ' + CAMPAIGN.period_label;
+}
+
 // Part 3: All Chart.js charts + nav/scroll spy
 
 // --- helpers -----------------------------------------------------------------
@@ -456,35 +490,44 @@ mkChart('channelDailyChart', {
   }
 });
 
-// --- 8. Age Group ------------------------------------------------------------
-mkChart('ageGroupChart', {
-  type: 'bar',
+// --- 8. Gender Split Doughnut ------------------------------------------------
+var genderData = CAMPAIGN.demographics.gender;
+mkChart('genderChart', {
+  type: 'doughnut',
   data: {
-    labels: CAMPAIGN.customers.age_groups.map(function(a){ return a.label; }),
+    labels: genderData.map(function(g){ return g.label; }),
     datasets: [{
-      label: 'Customers',
-      data:  CAMPAIGN.customers.age_groups.map(function(a){ return a.count; }),
-      backgroundColor: [GRAY,'#d4f5e9','#a8ecd4','#6ddbb8',MINT],
-      borderRadius: 8
+      data: genderData.map(function(g){ return g.value; }),
+      backgroundColor: [MINT, NAVY, GRAY],
+      borderWidth: 2,
+      borderColor: '#fff'
     }]
   },
   options: {
-    responsive: true, maintainAspectRatio: false, indexAxis:'y',
-    plugins: { legend:{ display:false } },
-    scales: {
-      x: { ticks:{ callback:function(v){ return fmtCount(v); } }, grid:{color:'#f0f0f0'} },
-      y: { grid:{display:false} }
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { position: 'bottom', labels: { padding: 16, font: { size: 13 } } },
+      tooltip: {
+        callbacks: {
+          label: function(ctx) {
+            var total = ctx.dataset.data.reduce(function(a,b){ return a+b; }, 0);
+            var pct = ((ctx.parsed / total) * 100).toFixed(1);
+            return ' ' + ctx.label + ': ' + ctx.parsed.toLocaleString() + ' (' + pct + '%)';
+          }
+        }
+      }
     }
   }
 });
 
 // --- 9. Generation GPV -------------------------------------------------------
+var genData = CAMPAIGN.demographics.generations;
 mkChart('generationChart', {
   type: 'doughnut',
   data: {
-    labels: CAMPAIGN.customers.generations.map(function(g){ return g.label; }),
+    labels: genData.map(function(g){ return g.label; }),
     datasets: [{
-      data: CAMPAIGN.customers.generations.map(function(g){ return g.gpv; }),
+      data: genData.map(function(g){ return g.value; }),
       backgroundColor: [MINT, NAVY, GOLD, '#888', GRAY],
       borderWidth:0, hoverOffset:8
     }]
@@ -498,13 +541,14 @@ mkChart('generationChart', {
 });
 
 // --- 10. Cohort Pie ----------------------------------------------------------
-var cohortTotal = CAMPAIGN.customers.cohorts.reduce(function(s,c){ return s+c.count; }, 0);
+var cohortData = CAMPAIGN.demographics.cohorts;
+var cohortTotal = cohortData.reduce(function(s,c){ return s+c.value; }, 0);
 mkChart('cohortChart', {
   type: 'pie',
   data: {
-    labels: CAMPAIGN.customers.cohorts.map(function(c){ return c.label; }),
+    labels: cohortData.map(function(c){ return c.label; }),
     datasets: [{
-      data: CAMPAIGN.customers.cohorts.map(function(c){ return c.count; }),
+      data: cohortData.map(function(c){ return c.value; }),
       backgroundColor: [MINT, NAVY, GOLD, GRAY],
       borderWidth:2, borderColor:'#fff', hoverOffset:10
     }]
@@ -525,7 +569,30 @@ mkChart('cohortChart', {
   }
 });
 
-// --- 11. Segment Charts ------------------------------------------------------
+// --- 11. Top 10 SA4 Regions --------------------------------------------------
+var sa4Data = CAMPAIGN.demographics.sa4_regions;
+mkChart('sa4Chart', {
+  type: 'bar',
+  data: {
+    labels: sa4Data.map(function(r){ return r.label; }),
+    datasets: [{
+      label: 'Customers',
+      data: sa4Data.map(function(r){ return r.value; }),
+      backgroundColor: sa4Data.map(function(r, i){ return i === 0 ? MINT : '#a8ecd4'; }),
+      borderRadius: 6
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false, indexAxis: 'y',
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { ticks: { callback: function(v){ return v.toLocaleString(); } }, grid: { color: '#f0f0f0' } },
+      y: { grid: { display: false }, ticks: { font: { size: 11 } } }
+    }
+  }
+});
+
+// --- 12. Segment Charts ------------------------------------------------------
 var seg5 = CAMPAIGN.segments.top5;
 var segLabels = seg5.map(function(s){ return s.name; });
 

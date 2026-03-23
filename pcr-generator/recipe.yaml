@@ -293,15 +293,50 @@ instructions: |
   ORDER BY period, gpv DESC;
   ```
 
-  ### Query F: Customer Demographics
+  ### Query F: Customer Demographics (Generation + Engagement Cohort)
   ```sql
-  SELECT age_group, generation, engagement_cohort,
+  SELECT generation,
     COUNT(DISTINCT consumer_id) AS customers,
     SUM(order_amount_aud) AS gpv
   FROM AP_CUR_BI_G.CURATED_ANALYTICS_GREEN.CUR_C_M_ORDER_MASTER
   WHERE date_local BETWEEN '{{ start_date }}' AND '{{ end_date }}'
     AND merchant_name ILIKE '%{{ merchant_name }}%'
-  GROUP BY 1, 2, 3
+  GROUP BY 1
+  ORDER BY gpv DESC;
+  ```
+
+  ### Query G: Gender Split
+  ```sql
+  SELECT gender,
+    COUNT(DISTINCT consumer_id) AS customers
+  FROM AP_CUR_BI_G.CURATED_ANALYTICS_GREEN.CUR_C_M_ORDER_MASTER
+  WHERE date_local BETWEEN '{{ start_date }}' AND '{{ end_date }}'
+    AND merchant_name ILIKE '%{{ merchant_name }}%'
+  GROUP BY 1
+  ORDER BY customers DESC;
+  ```
+
+  ### Query H: Top 10 SA4 Regions
+  ```sql
+  SELECT sa4_name,
+    COUNT(DISTINCT consumer_id) AS customers
+  FROM AP_CUR_BI_G.CURATED_ANALYTICS_GREEN.CUR_C_M_ORDER_MASTER
+  WHERE date_local BETWEEN '{{ start_date }}' AND '{{ end_date }}'
+    AND merchant_name ILIKE '%{{ merchant_name }}%'
+    AND sa4_name IS NOT NULL
+  GROUP BY 1
+  ORDER BY customers DESC
+  LIMIT 10;
+  ```
+
+  ### Query I: Engagement Cohorts
+  ```sql
+  SELECT engagement_cohort,
+    COUNT(DISTINCT consumer_id) AS customers
+  FROM AP_CUR_BI_G.CURATED_ANALYTICS_GREEN.CUR_C_M_ORDER_MASTER
+  WHERE date_local BETWEEN '{{ start_date }}' AND '{{ end_date }}'
+    AND merchant_name ILIKE '%{{ merchant_name }}%'
+  GROUP BY 1
   ORDER BY customers DESC;
   ```
 
@@ -317,11 +352,14 @@ instructions: |
   - Compute % changes: ((campaign - baseline) / baseline * 100), show as "+X%" or "-X%"
   - For kpi_badges, determine dir: "up" if positive vs baseline, "down" if negative, "neutral" for share/count
   - For segments top5: take the 5 highest GPV segments from Campaign period
-  - For rank_shift: compare campaign rank vs baseline rank for each segment
+  - For rank_shift: compare campaign rank vs baseline rank for each segment; include 6th segment as rank_shift_extras
   - For daily array: one entry per row from Query B
-  - For age_groups: aggregate customers by age_group from Query F
-  - For generations: aggregate gpv by generation from Query F
-  - For cohorts: aggregate customers by engagement_cohort from Query F
+  - For demographics.gender: array of {label, value} from Query G (Female, Male, Unknown)
+  - For demographics.generations: array of {label, value} from Query F — value is GPV (not customer count)
+  - For demographics.cohorts: array of {label, value} from Query I — value is customer count
+  - For demographics.sa4_regions: array of {label, value} from Query H — top 10 SA4 regions by customer count
+  - For kpis.top_location / top_location_pct: the #1 SA4 region from Query H and its % of total customers
+  - For kpis.top_generation / top_generation_pct: the #1 generation from Query F and its % of total customers
   - For insights and recommendations: generate 6 of each based on the actual data patterns
     (e.g. if online > 70%, mention digital strength; if NTM high, mention acquisition success)
 
